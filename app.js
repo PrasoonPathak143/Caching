@@ -43,10 +43,18 @@ app.post('/create', async (req, res) => {
 app.get('/users/:id', async (req, res) => {
     const { id } = req.params;
     try{
-        const user = await userModel.findOne({_id: id});
+        let data = await client.get(`user:profile:${id}`);  // look for data in cache
+        if(data){
+            console.log('Data from cache');
+            return res.send({data: JSON.parse(data)});
+        }
+        const user = await userModel.findOne({_id: id});  // look for data in database
         if(!user){
             return res.status(404).send({ error: 'User not found' });
         }
+        // await client.set(`user:profile:${id}`, JSON.stringify(user));  // set data in cache 
+        await client.setEx(`user:profile:${id}`, 5, JSON.stringify(user));   // set data in cache with some expiration time
+        // await client.del(`user:profile:${id}`);  // delate data from cache
         res.send({ user });
     }catch(err){
         res.status(400).send({ error: err.message });
